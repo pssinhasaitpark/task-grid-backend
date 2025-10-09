@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
+import routes from "./app/routes/index.js";
+import { connectDB } from "./app/config/dbConfig.js";
 
 dotenv.config();
 
@@ -23,6 +25,10 @@ app.use(
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.json());
+
+
+connectDB();
+routes(app);
 
 app.get("/", (req, res) => {
   return res.status(200).send({
