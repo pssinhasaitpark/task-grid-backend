@@ -1,0 +1,70 @@
+import User from "../../models/user/user.js";
+import { handleResponse } from "../../utils/helper.js";
+
+export const getProfile = async (req, res) => {
+  try {
+    const { id } = req.user;
+
+    const user = await User.findById(id).select("-password -__v");
+
+    if (!user) {
+      return handleResponse(req, 404, "user details not found");
+    }
+
+    return handleResponse(res, 200, "User profile fetched successfully", user);
+  } catch (err) {
+    console.error("Create Address Error:", err);
+    handleResponse(res, 500, "Server error");
+  }
+};
+
+
+export const updateProfile = async (req, res) => {
+    try {
+      const userId = req.user.id; 
+      const user = await User.findById(userId);
+  
+      if (!user) return res.status(404).json({ message: "User not found" });
+  
+      const { name, email, phone, serviceArea } = req.body;
+  
+      if (email && email !== user.email) {
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        
+        if (existingUser && existingUser._id.toString() !== userId) {
+          return res.status(400).json({ message: "Email already in use by another account" });
+        }
+  
+        user.email = email.toLowerCase();
+      }
+  
+      if (name) user.name = name;
+      if (phone) user.phone = phone;
+  
+      if (user.role === "provider" && serviceArea) {
+        if (!Array.isArray(serviceArea)) {
+          return res.status(400).json({ message: "serviceArea must be an array" });
+        }
+        user.serviceArea = serviceArea;
+      }
+  
+      await user.save();
+  
+      res.status(200).json({
+        message: "Profile updated successfully",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          serviceArea: user.serviceArea,
+          isVerified: user.isVerified,
+        },
+      });
+    } catch (error) {
+      console.error("Update Profile Error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  };
+  

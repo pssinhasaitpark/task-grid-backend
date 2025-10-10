@@ -16,7 +16,7 @@ const providerServiceSchema = new mongoose.Schema({
     required: true
   },
   duration: {
-    type: String,
+    type: String, 
     required: true
   },
   description: {

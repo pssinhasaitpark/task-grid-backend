@@ -21,7 +21,7 @@ const serviceTemplateSchema = new mongoose.Schema({
   isApproved: {
     type: Boolean,
     default: function () {
-      return this.createdByRole === 'admin'; // Auto-approve if admin
+      return this.createdByRole === 'admin'; 
     }
   },
   createdAt: {
