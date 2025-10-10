@@ -1,5 +1,7 @@
-import User from "../../models/user.js";
+import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
+import { sendApprovalEmail } from "../../utils/emailHandler.js";
+
 
 export const approveProvider = async (req, res) => {
   const { id } = req.params;
@@ -22,6 +24,8 @@ export const approveProvider = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
+    await sendApprovalEmail(user.email, user.name);
+
     return handleResponse(res, 200, "Provider approved successfully", {
       id: user._id,
       name: user.name,
@@ -34,6 +38,8 @@ export const approveProvider = async (req, res) => {
     return handleResponse(res, 500, "Server error");
   }
 };
+
+
 
 export const getUnapprovedProviders = async (req, res) => {
   try {

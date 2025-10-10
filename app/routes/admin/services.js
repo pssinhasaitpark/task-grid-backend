@@ -1,18 +1,20 @@
-import express from 'express';
+import express from "express";
 import {
   createServiceTemplate,
   getPendingServiceTemplates,
-  approveServiceTemplate
-} from '../../controllers/admin/services.js';
+  approveServiceTemplate,
+} from "../../controllers/admin/services.js";
 
-import { verifyToken, isAdmin } from '../../middlewares/jwtAuth.js';
+import { verifyToken, isAdmin } from "../../middlewares/jwtAuth.js";
 
 const router = express.Router();
 
-router.post('/', verifyToken, isAdmin, createServiceTemplate);
+router.use(verifyToken,isAdmin)
 
-router.get('/pending', verifyToken, isAdmin, getPendingServiceTemplates);
+router.post("/", createServiceTemplate);
 
-router.patch('/approve/:id', verifyToken, isAdmin, approveServiceTemplate);
+router.get("/pending", getPendingServiceTemplates);
+
+router.put("/approve/:id", approveServiceTemplate);
 
 export default router;
