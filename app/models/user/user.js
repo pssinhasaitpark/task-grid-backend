@@ -35,7 +35,10 @@ const UserSchema = new mongoose.Schema({
     enum: ["customer", "provider", "admin"],
     default: "customer",
   },
-
+  profile_image: {
+    type: String,
+    default: null
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -51,10 +54,13 @@ const UserSchema = new mongoose.Schema({
     default: null,
   },
 
-password_reset_otp_hash: { type: String, default: null }, 
-password_reset_otp_expires: { type: Date, default: null },
-password_reset_otp_attempts: { type: Number, default: 0 }, 
-password_reset_otp_verified: { type: Boolean, default: false }, 
+  password_reset_otp_hash: { type: String, default: null },
+  password_reset_otp_expires: { type: Date, default: null },
+  password_reset_otp_attempts: { type: Number, default: 0 },
+  password_reset_otp_verified: { type: Boolean, default: false },
+
+  refresh_token_jti: { type: String, default: null },
+  refresh_token_expiry: { type: Date, default: null },
 
   createdAt: {
     type: Date,
@@ -85,6 +91,7 @@ UserSchema.virtual("addresses", {
 });
 
 UserSchema.set("toObject", { virtuals: true });
+
 UserSchema.set("toJSON", {
   virtuals: true,
   versionKey: false,
@@ -96,10 +103,11 @@ UserSchema.set("toJSON", {
     delete ret.password_reset_otp_expires;
     delete ret.password_reset_otp_attempts;
     delete ret.password_reset_otp_verified;
+    delete ret.refresh_token_jti;
+    delete ret.refresh_token_expiry;
     return ret;
   },
 });
-
 
 const User = mongoose.model("User", UserSchema);
 export default User;

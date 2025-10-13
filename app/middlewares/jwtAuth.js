@@ -23,6 +23,33 @@ export const signResetToken = (email, id, role) => {
 
 
 
+export const signRefreshToken = async (user) => {
+  const jti = uuidv4(); 
+  const payload = {
+    id: user._id,
+    role: user.role,
+    jti,
+  };
+
+  const options = {
+    subject: `${user._id}`,
+    expiresIn: "30d",
+  };
+
+  const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, options);
+
+  
+  const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); 
+
+  user.refresh_token_jti = jti;
+  user.refresh_token_expiry = expiryDate;
+  await user.save();
+
+  return refreshToken;
+};
+
+
+
 export const signAccessToken = (id, role) => {
   return generateToken(id, role, process.env.ACCESS_TOKEN_SECRET);
 };
@@ -33,7 +60,7 @@ export const generateToken = (
   secret,
   expiresIn = process.env.EXPIREIN || "1d"
 ) => {
-  return new Promise((resolve, reject) => {
+return new Promise((resolve, reject) => {
     const payload = { id, role };
     const options = {
       subject: `${id}`,

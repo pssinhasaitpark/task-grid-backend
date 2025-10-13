@@ -1,7 +1,7 @@
 import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
-import { signAccessToken } from "../../middlewares/jwtAuth.js";
-import { signResetToken } from "../../middlewares/jwtAuth.js";
+import { signAccessToken ,signResetToken,signRefreshToken} from "../../middlewares/jwtAuth.js";
+import {  } from "../../middlewares/jwtAuth.js";
 import jwt from "jsonwebtoken";
 import {sendPasswordResetSuccessEmail  } from "../../utils/emailHandler.js";
 import { generateOTP } from "../../middlewares/jwtAuth.js";
@@ -53,7 +53,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const loginUser = async (req, res) => {
+/* export const loginUser = async (req, res) => {
   const { email, password, role } = req.body;
 
   if (!["customer", "provider", "admin"].includes(role)) {
@@ -92,6 +92,53 @@ export const loginUser = async (req, res) => {
     return handleResponse(res, 500, "Server error");
   }
 };
+ */
+
+export const loginUser = async (req, res) => {
+  const { email, password, role } = req.body;
+
+  if (!["customer", "provider", "admin"].includes(role)) {
+    return handleResponse(res, 400, "Invalid role");
+  }
+
+  try {
+    const user = await User.findOne({ email, role });
+    if (!user) {
+      return handleResponse(res, 401, "Invalid email or role");
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return handleResponse(res, 400, "Invalid email or password");
+
+    if (role === "provider" && !user.isVerified) {
+      return handleResponse(res, 403, "Provider not verified yet");
+    }
+
+    // Generate access token
+    const accessToken = await signAccessToken(user._id.toString(), user.role);
+
+    // Generate refresh token and save jti + expiry in DB
+    const refreshToken = await signRefreshToken(user);
+
+    return handleResponse(res, 200, "Login successful", {
+      accessToken,
+      refreshToken,
+      role: user.role,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        serviceArea: user.serviceArea,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return handleResponse(res, 500, "Server error");
+  }
+};
+
 
 
 export const forgatePassword = async (req, res) => {
@@ -207,4 +254,81 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+
+export const refreshAccessToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return handleResponse(res, 401, "No refresh token provided");
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    const user = await User.findById(decoded.id);
+    if (!user) return handleResponse(res, 401, "User not found");
+
+
+    if (
+      user.refresh_token_jti !== decoded.jti ||
+      !user.refresh_token_expiry ||
+      user.refresh_token_expiry < new Date()
+    ) {
+      return handleResponse(res, 403, "Invalid or expired refresh token");
+    }
+
+    
+    const newAccessToken = await signAccessToken(user._id.toString(), user.role);
+    const newRefreshToken = await signRefreshToken(user); // rotates and saves in DB
+
+    return handleResponse(res, 200, "Tokens refreshed", {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (err) {
+    console.error(err);
+    return handleResponse(res, 403, "Invalid or expired refresh token");
+  }
+};
+
+
+export const changePassword = async (req, res) => {
+  const { oldPassword, newPassword, confirmPassword } = req.body || {};
+
+  try {
+
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) {
+      return handleResponse(res, 404, "User not found");
+    }
+
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return handleResponse(res, 400, "All password fields are required");
+    }
+
+
+    const isMatch = await user.matchPassword(oldPassword);
+    if (!isMatch) {
+      return handleResponse(res, 401, "Old password is incorrect");
+    }
+
+    if (newPassword !== confirmPassword) {
+      return handleResponse(res, 400, "New passwords do not match");
+    }
+
+    if (oldPassword === newPassword) {
+      return handleResponse(res, 400, "New password cannot be same as old password");
+    }
+
+
+    user.password = newPassword;
+    await user.save();
+
+    return handleResponse(res, 200, "Password changed successfully");
+  } catch (err) {
+    console.error("Change Password Error:", err);
+    return handleResponse(res, 500, "Server error");
+  }
+};
 

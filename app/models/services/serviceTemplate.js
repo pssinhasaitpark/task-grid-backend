@@ -24,6 +24,10 @@ const serviceTemplateSchema = new mongoose.Schema({
       return this.createdByRole === 'admin'; 
     }
   },
+  image: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

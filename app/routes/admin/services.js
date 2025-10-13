@@ -6,12 +6,13 @@ import {
 } from "../../controllers/admin/services.js";
 
 import { verifyToken, isAdmin } from "../../middlewares/jwtAuth.js";
+import { uploadAndConvertImage } from "../../middlewares/upload.js";
 
 const router = express.Router();
 
 router.use(verifyToken,isAdmin)
 
-router.post("/", createServiceTemplate);
+router.post("/", uploadAndConvertImage('image'),createServiceTemplate);
 
 router.get("/pending", getPendingServiceTemplates);
 
