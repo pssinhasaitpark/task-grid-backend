@@ -16,10 +16,11 @@ export const createServiceTemplate = async (req, res) => {
     }
 
     const newTemplate = new ServiceTemplate({
-      name: name.trim().toLowerCase(),
+      name: name.trim(),
       isApproved: true, 
       createdBy: req.user._id,
-      createdByRole: req.user.role
+      createdByRole: req.user.role,
+      image: req.imagePath || null 
     });
 
     await newTemplate.save();
@@ -67,4 +68,28 @@ export const getPendingServiceTemplates = async (req, res) => {
       console.error(err);
       handleResponse(res, 500, 'Server error');
     }
+};
+
+
+export const approveTemplate = async (req, res) => {
+  try {
+    const templateId = req.params.id;
+    const userRole = req.user.role; 
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admin can approve templates' });
+    }
+
+    const template = await ServiceTemplate.findById(templateId);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    template.isApproved = true;
+    await template.save();
+
+    return res.status(200).json({ message: 'Template approved successfully', template });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };

@@ -4,6 +4,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import routes from "./app/routes/index.js";
 import { connectDB } from "./app/config/dbConfig.js";
+import mediaRoutes from "./app/routes/media.js";
 
 dotenv.config();
 
@@ -13,10 +14,8 @@ const port = process.env.PORT || 5050;
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000"
-    ],
-    methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],                                                                                         
+    origin: ["http://localhost:3000"],
+    methods: ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
     optionsSuccessStatus: 200,
     credentials: true,
   })
@@ -26,9 +25,9 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.json());
 
-
 connectDB();
 routes(app);
+mediaRoutes(app);
 
 app.get("/", (req, res) => {
   return res.status(200).send({
@@ -36,7 +35,6 @@ app.get("/", (req, res) => {
     message: "Service Booking Platform Apis's",
   });
 });
-
 
 app.listen(port, host, () =>
   console.log(`App is listening at port: http://${host}:${port}`)
