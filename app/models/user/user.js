@@ -39,6 +39,28 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  isNew: {
+    type: Boolean,
+    default: true,
+  },
+  availableDays: {
+    type: [
+      {
+        type: String,
+        enum: [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ],
+      },
+    ],
+    default: [],
+  },
+
   isVerified: {
     type: Boolean,
     default: false,

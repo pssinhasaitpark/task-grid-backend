@@ -11,13 +11,13 @@ const providerServiceSchema = new mongoose.Schema({
     ref: 'ServiceTemplate',
     required: true
   },
-  price: {
+  hourlyRate: {
     type: Number,
-    required: true
+    default: null
   },
-  duration: {
-    type: String, 
-    required: true
+  dailyRate: {
+    type: Number,
+    default: null
   },
   description: {
     type: String,
@@ -32,6 +32,7 @@ const providerServiceSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
 
 const ProviderService = mongoose.model('ProviderService', providerServiceSchema);
 export default ProviderService;
