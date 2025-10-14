@@ -3,9 +3,21 @@ import { handleResponse } from "../../utils/helper.js";
 import mongoose from 'mongoose';
 
 
+
 export const createAddress = async (req, res) => {
-  const { addressType, addressLine1, addressLine2, city, state, pincode, country } = req.body;
-  const userId = req.user?._id || req.body.user; 
+  const {
+    addressType,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    country,
+    longitude,
+    latitude
+  } = req.body || {};
+
+  const userId = req.user?._id || req.body.user;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return handleResponse(res, 400, "Invalid or missing user ID.");
@@ -13,6 +25,15 @@ export const createAddress = async (req, res) => {
 
   if (!addressLine1 || !city || !state || !pincode) {
     return handleResponse(res, 400, "Missing required address fields.");
+  }
+
+  // Optional: Validate longitude and latitude if provided
+  if (longitude !== undefined && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+    return handleResponse(res, 400, "Invalid longitude value.");
+  }
+
+  if (latitude !== undefined && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+    return handleResponse(res, 400, "Invalid latitude value.");
   }
 
   try {
@@ -24,7 +45,9 @@ export const createAddress = async (req, res) => {
       city,
       state,
       pincode,
-      country
+      country,
+      longitude,
+      latitude,
     });
 
     const savedAddress = await newAddress.save();
@@ -34,7 +57,6 @@ export const createAddress = async (req, res) => {
     handleResponse(res, 500, "Server error");
   }
 };
-
 
 export const getAddressById = async (req, res) => {
   const { id } = req.params;
@@ -57,13 +79,31 @@ export const getAddressById = async (req, res) => {
   }
 };
 
-
 export const updateAddress = async (req, res) => {
   const { id } = req.params;
-  const { addressType, addressLine1, addressLine2, city, state, pincode, country } = req.body;
+  const {
+    addressType,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    country,
+    longitude,
+    latitude
+  } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return handleResponse(res, 400, "Invalid address ID.");
+  }
+
+  // Optional: Validate longitude and latitude if provided
+  if (longitude !== undefined && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+    return handleResponse(res, 400, "Invalid longitude value.");
+  }
+
+  if (latitude !== undefined && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+    return handleResponse(res, 400, "Invalid latitude value.");
   }
 
   try {
@@ -77,7 +117,9 @@ export const updateAddress = async (req, res) => {
           city,
           state,
           pincode,
-          country
+          country,
+          longitude,
+          latitude,
         }
       },
       { new: true, runValidators: true }
@@ -93,7 +135,6 @@ export const updateAddress = async (req, res) => {
     handleResponse(res, 500, "Server error");
   }
 };
-
 
 export const deleteAddress = async (req, res) => {
   const { id } = req.params;
@@ -116,9 +157,8 @@ export const deleteAddress = async (req, res) => {
   }
 };
 
-
 export const getAllAddresses = async (req, res) => {
-    const userId = req.user.id;
+  const userId = req.user.id;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return handleResponse(res, 400, "Invalid user ID.");
