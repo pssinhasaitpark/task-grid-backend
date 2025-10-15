@@ -43,7 +43,7 @@ export const registerUser = async (req, res) => {
 
     const message =
       role === "provider"
-        ? "Registered successfully as provider. Please wait for admin approval."
+        ? "Registered successfully as provider."
         : "Registered successfully as customer.";
 
 
@@ -71,14 +71,10 @@ export const loginUser = async (req, res) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) return handleResponse(res, 400, "Invalid email or password");
 
-    // if (role === "provider" && !user.isVerified) {
-    //   return handleResponse(res, 403, "Provider not verified yet");
-    // }
 
-    // Generate access token
+
     const accessToken = await signAccessToken(user._id.toString(), user.role);
 
-    // Generate refresh token and save jti + expiry in DB
     const refreshToken = await signRefreshToken(user);
 
     return handleResponse(res, 200, "Login successful", {

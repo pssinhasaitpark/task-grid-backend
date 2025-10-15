@@ -5,22 +5,17 @@ const AvailabilitySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
+    unique: true,
   },
-  day: {
-    type: String,
+  days: {
+    type: [String],
     enum: [
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
+      "monday", "tuesday", "wednesday", "thursday",
+      "friday", "saturday", "sunday"
     ],
-    required: true,
+    default: [],
   },
-
-});
+}, { timestamps: true });
 
 const Availability = mongoose.model("Availability", AvailabilitySchema);
 export default Availability;

@@ -2,6 +2,7 @@ import express from 'express';
 import {
 createProviderService,createTemplateRequest,deleteProviderService,getMyServiceRequests,
 getMyServices,
+getServicesByTemplate,
 updateProviderService
 } from '../../controllers/user/services.js';
 
@@ -25,7 +26,11 @@ router.delete('/:id', verifyToken, deleteProviderService);
 
 router.get("/", getAllApprovedServices);
 
-router.get("/names",getAllTemplateNames)
+router.get("/names", getAllTemplateNames);
+
+router.get('/by-template/:templateId', getServicesByTemplate);
+
+
 
 
 export default router;

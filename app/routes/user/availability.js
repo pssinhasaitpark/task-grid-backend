@@ -4,12 +4,19 @@ import { verifyToken } from "../../middlewares/jwtAuth.js";
 
 const router = express.Router();
 
+
+
 router.use(verifyToken);
 
-router.post("/", availabilityController.createAvailability);
+router.post("/", availabilityController.createOrUpdateAvailability);
+
 router.get("/my", availabilityController.getMyAvailability);
-router.get("/:id", availabilityController.getAvailabilityById);
-router.put("/:id", availabilityController.updateAvailability);
-router.delete("/:id", availabilityController.deleteAvailability);
+
+router.delete("/", availabilityController.deleteAvailability);
+
+
+router.get("/check", availabilityController.isUserAvailableOnDay);
+
+
 
 export default router;
