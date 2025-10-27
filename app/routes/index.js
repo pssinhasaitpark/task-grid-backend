@@ -6,6 +6,7 @@ import providerServicesRoutes from "../routes/user/services.js"
 import adminServicesRoutes from "../routes/admin/services.js"
 import availabilityRoutes from "../routes/user/availability.js"
 import locationRoutes from "../routes/user/location.js"
+import customerRoutes from "../routes/admin/customer.js";
 
 export default (app) => {
     app.use("/api/v1/auth", authRoutes);
@@ -18,6 +19,7 @@ export default (app) => {
     //admin routes
     app.use("/api/v1/admin", providerApprovalRoutes);
     app.use("/api/v1/admin/services", adminServicesRoutes);
+    app.use("/api/v1/admin", customerRoutes);
 
 
 };

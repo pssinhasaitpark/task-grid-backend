@@ -45,6 +45,7 @@ export const sendPasswordResetSuccessEmail = async (email, name) => {
   }
 };
 
+
 export const sendApprovalEmail = async (email, name) => {
   try {
     const transporter = nodemailer.createTransport({

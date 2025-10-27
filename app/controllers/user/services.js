@@ -3,6 +3,7 @@ import ProviderService from "../../models/services/providerService.js";
 import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
 import mongoose from "mongoose";
+import Address from "../../models/user/address.js";
 
 
 
@@ -244,5 +245,263 @@ export const getServicesByTemplate = async (req, res) => {
   } catch (err) {
     console.error("Error fetching services by template:", err);
     return handleResponse(res, 500, "Internal server error");
+  }
+};
+
+
+/* export const getProvidersByServiceTemplate = async (req, res) => {
+  try {
+    const { templateId, page = 1, limit = 10 } = req.query;
+
+  
+    let templateFilter = {};
+    let templateIds = [];
+
+    if (templateId) {
+      templateIds = templateId.split(',').map(id => id.trim());
+
+
+      const existingTemplates = await ServiceTemplate.find({
+        _id: { $in: templateIds }
+      }).select('_id');
+
+      if (existingTemplates.length === 0) {
+        return handleResponse(res, 404, "No matching service templates found");
+      }
+
+      templateFilter.template = { $in: templateIds };
+    }
+
+
+    const allProviderServices = await ProviderService.find({
+      ...templateFilter,
+      isApproved: true,
+    }).select('provider');
+
+
+    const uniqueProviderIds = [...new Set(allProviderServices.map(ps => ps.provider.toString()))];
+
+    if (uniqueProviderIds.length === 0) {
+      return handleResponse(res, 200, "No verified providers found", {
+        count: 0,
+        providers: [],
+      });
+    }
+
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+
+    const paginatedProviderIds = uniqueProviderIds.slice(skip, skip + limitNum);
+
+
+    const providers = await User.find({
+      _id: { $in: paginatedProviderIds },
+      isVerified: true,
+    }).select('name email serviceArea isVerified profile_image');
+
+    if (providers.length === 0) {
+      return handleResponse(res, 200, "No verified providers found on this page", {
+        count: 0,
+        providers: [],
+      });
+    }
+
+   
+    const services = await ProviderService.find({
+      provider: { $in: providers.map(p => p._id) },
+      isApproved: true,
+      ...(templateFilter.template ? { template: templateFilter.template } : {}),
+    })
+    .populate('template', 'name')
+    .select('provider template hourlyRate dailyRate description'); 
+    
+   
+    const servicesByProvider = {};
+    services.forEach(service => {
+      const provId = service.provider.toString();
+      if (!servicesByProvider[provId]) {
+        servicesByProvider[provId] = [];
+      }
+      servicesByProvider[provId].push(service);
+    });
+
+
+    const providersWithServices = providers.map(provider => ({
+      ...provider.toObject(),
+      services: servicesByProvider[provider._id.toString()] || [],
+    }));
+
+    
+    return handleResponse(res, 200, "Verified providers with services fetched successfully", {
+      count: uniqueProviderIds.length,
+      page: pageNum,
+      limit: limitNum,
+      providers: providersWithServices,
+    });
+
+  } catch (error) {
+    console.error("Error fetching verified providers by template:", error);
+    return handleResponse(res, 500, "Server Error");
+  }
+};
+ */
+
+
+
+
+export const getProvidersByServiceTemplate = async (req, res) => {
+  try {
+    const { templateId, page = 1, limit = 10, addressId } = req.query;
+
+    // ✅ 1. Pagination validation
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+    const skip = (pageNum - 1) * limitNum;
+
+    // ✅ 2. Validate templateId(s)
+    let templateFilter = {};
+    if (templateId) {
+      const templateIds = templateId.split(",").map((id) => id.trim());
+      const validTemplates = await ServiceTemplate.find({
+        _id: { $in: templateIds },
+      }).select("_id");
+
+      if (!validTemplates.length) {
+        return handleResponse(res, 404, "No matching service templates found");
+      }
+
+      templateFilter.template = { $in: validTemplates.map((t) => t._id) };
+    }
+
+    // ✅ 3. Resolve user's city/state from addressId (if given)
+    let locationQuery = null;
+    if (addressId) {
+      if (!mongoose.Types.ObjectId.isValid(addressId)) {
+        return handleResponse(res, 400, "Invalid addressId format");
+      }
+
+      const address = await Address.findById(addressId).select("city state");
+      if (!address) {
+        return handleResponse(res, 404, "Address not found");
+      }
+
+      locationQuery = { city: address.city, state: address.state };
+    }
+
+    // ✅ 4. Get provider IDs with approved services (fast lookup)
+    const providerServices = await ProviderService.find({
+      ...templateFilter,
+      isApproved: true,
+    }).select("provider");
+
+    const providerIds = [
+      ...new Set(providerServices.map((ps) => ps.provider.toString())),
+    ];
+
+    if (!providerIds.length) {
+      return handleResponse(res, 200, "No approved provider services found", {
+        count: 0,
+        providers: [],
+      });
+    }
+
+    // ✅ 5. Build aggregation pipeline for provider filtering
+    const aggregationPipeline = [
+      {
+        $match: {
+          _id: { $in: providerIds.map((id) => new mongoose.Types.ObjectId(id)) },
+          isVerified: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "_id",      // User._id ↔ Address.user
+          foreignField: "user",
+          as: "addresses",
+        },
+      },
+    ];
+
+    if (locationQuery) {
+      aggregationPipeline.push({
+        $match: {
+          addresses: {
+            $elemMatch: {
+              city: { $regex: new RegExp(`^${locationQuery.city}$`, "i") },
+              state: { $regex: new RegExp(`^${locationQuery.state}$`, "i") },
+            },
+          },
+        },
+      });
+    }
+
+    // ✅ 6. Use $facet to get paginated results + total count
+    aggregationPipeline.push({
+      $facet: {
+        totalCount: [{ $count: "count" }],
+        providers: [
+          { $skip: skip },
+          { $limit: limitNum },
+          {
+            $project: {
+              name: 1,
+              email: 1,
+              profile_image: 1,
+              isVerified: 1,
+            },
+          },
+        ],
+      },
+    });
+
+    const [result] = await User.aggregate(aggregationPipeline);
+    const totalCount = result.totalCount?.[0]?.count || 0;
+    const providers = result.providers || [];
+
+    if (!providers.length) {
+      return handleResponse(res, 200, "No providers found for this location", {
+        count: totalCount,
+        providers: [],
+      });
+    }
+
+    // ✅ 7. Fetch their approved services
+    const providerIdsOnPage = providers.map((p) => p._id);
+    const services = await ProviderService.find({
+      provider: { $in: providerIdsOnPage },
+      isApproved: true,
+      ...(templateFilter.template ? { template: templateFilter.template } : {}),
+    })
+      .populate("template", "name")
+      .select("provider template hourlyRate dailyRate description");
+
+    // ✅ 8. Group services by provider
+    const servicesByProvider = services.reduce((acc, s) => {
+      const id = s.provider.toString();
+      if (!acc[id]) acc[id] = [];
+      acc[id].push(s);
+      return acc;
+    }, {});
+
+    // ✅ 9. Merge providers + their services (no address data returned)
+    const providersWithServices = providers.map((provider) => ({
+      ...provider,
+      services: servicesByProvider[provider._id.toString()] || [],
+    }));
+
+    // ✅ 10. Final Response
+    return handleResponse(res, 200, "Providers fetched successfully", {
+      count: totalCount,
+      page: pageNum,
+      limit: limitNum,
+      providers: providersWithServices,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching providers:", error);
+    return handleResponse(res, 500, "Server Error");
   }
 };

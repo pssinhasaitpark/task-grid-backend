@@ -1,9 +1,7 @@
 import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
-
-
-
-
+import ProviderService from "../../models/services/providerService.js";
+import Availability from "../../models/user/availability.js";
 export const getProfile = async (req, res) => {
   try {
     const { id } = req.user;
@@ -14,22 +12,24 @@ export const getProfile = async (req, res) => {
       return handleResponse(res, 404, "User details not found");
     }
 
-  
     const userObj = user.toJSON();
 
-  
     if (userObj.role !== "provider") {
       delete userObj.serviceArea;
       delete userObj.availableDays;
     }
 
-    return handleResponse(res, 200, "User profile fetched successfully", userObj);
+    return handleResponse(
+      res,
+      200,
+      "User profile fetched successfully",
+      userObj
+    );
   } catch (err) {
     console.error("Get Profile Error:", err);
     return handleResponse(res, 500, "Server error");
   }
 };
-
 
 export const updateProfile = async (req, res) => {
   try {
@@ -40,12 +40,15 @@ export const updateProfile = async (req, res) => {
 
     const { name, email, phone, serviceArea, availableDays } = req.body || {};
 
-    
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ email: email.toLowerCase() });
 
       if (existingUser && existingUser._id.toString() !== userId) {
-        return handleResponse(res, 400, "Email already in use by another account");
+        return handleResponse(
+          res,
+          400,
+          "Email already in use by another account"
+        );
       }
 
       user.email = email.toLowerCase();
@@ -58,10 +61,13 @@ export const updateProfile = async (req, res) => {
       user.profile_image = req.imagePath;
     }
 
-    
     if (serviceArea !== undefined) {
       if (user.role !== "provider") {
-        return handleResponse(res, 403, "Only providers can update serviceArea");
+        return handleResponse(
+          res,
+          403,
+          "Only providers can update serviceArea"
+        );
       }
 
       let parsedServiceArea = serviceArea;
@@ -82,7 +88,11 @@ export const updateProfile = async (req, res) => {
 
     if (availableDays !== undefined) {
       if (user.role !== "provider") {
-        return handleResponse(res, 403, "Only providers can update availableDays");
+        return handleResponse(
+          res,
+          403,
+          "Only providers can update availableDays"
+        );
       }
 
       let parsedAvailableDays = availableDays;
@@ -96,7 +106,7 @@ export const updateProfile = async (req, res) => {
 
       if (
         !Array.isArray(parsedAvailableDays) ||
-        !parsedAvailableDays.every(day =>
+        !parsedAvailableDays.every((day) =>
           [
             "monday",
             "tuesday",
@@ -108,15 +118,17 @@ export const updateProfile = async (req, res) => {
           ].includes(day.toLowerCase())
         )
       ) {
-        return handleResponse(res, 400, "availableDays must be an array of valid day names");
+        return handleResponse(
+          res,
+          400,
+          "availableDays must be an array of valid day names"
+        );
       }
 
-
-      user.availableDays = parsedAvailableDays.map(day => day.toLowerCase());
+      user.availableDays = parsedAvailableDays.map((day) => day.toLowerCase());
     }
 
     await user.save();
-
 
     const userResponse = {
       id: user._id,
@@ -142,3 +154,46 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+
+
+
+
+export const getUserById = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    
+    const user = await User.findById(id).select(
+      "_id name email phone serviceArea role profile_image isNew availableDays isVerified createdAt"
+    );
+
+    if (!user) {
+      return handleResponse(res, 404, "User not found");
+    }
+
+    const availability = await Availability.findOne({ user: id }).select("_id days");
+
+    const providerServices = await ProviderService.find({ provider: id })
+      .populate({
+        path: "template",
+        select: "_id name isApproved image createdAt", 
+      })
+      .select("_id template hourlyRate dailyRate description isApproved createdAt");
+
+    const userData = {
+      ...user.toObject(),
+      availability: availability || null,
+      services: providerServices || [],
+    };
+
+    return handleResponse(
+      res,
+      200,
+      "User details fetched successfully",
+      userData
+    );
+  } catch (error) {
+    console.error("Get User by ID Error:", error);
+    return handleResponse(res, 500, "Internal server error");
+  }
+};

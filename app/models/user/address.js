@@ -1,4 +1,3 @@
-// models/Address.js
 import mongoose from "mongoose";
 
 const AddressSchema = new mongoose.Schema(
@@ -11,7 +10,7 @@ const AddressSchema = new mongoose.Schema(
 
     addressType: {
       type: String,
-      enum: ["Home", "Work", "Other"],
+      enum: ["Home", "Work", "Shop", "Other"],
       default: "Other",
     },
 

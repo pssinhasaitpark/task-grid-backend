@@ -2,6 +2,7 @@ import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
 import { sendApprovalEmail } from "../../utils/emailHandler.js";
 
+
 /* 
 export const approveProvider = async (req, res) => {
   const { id } = req.params;
@@ -100,3 +101,6 @@ export const getUnapprovedProviders = async (req, res) => {
     return handleResponse(res, 500, "Server error");
   }
 };
+
+
+

@@ -28,6 +28,17 @@ const serviceTemplateSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  tokenAmountPercent: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  convenienceFee: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+
   createdAt: {
     type: Date,
     default: Date.now
