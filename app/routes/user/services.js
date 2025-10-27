@@ -2,6 +2,7 @@ import express from 'express';
 import {
 createProviderService,createTemplateRequest,deleteProviderService,getMyServiceRequests,
 getMyServices,
+getProvidersByServiceTemplate,
 getServicesByTemplate,
 updateProviderService
 } from '../../controllers/user/services.js';
@@ -29,6 +30,8 @@ router.get("/", getAllApprovedServices);
 router.get("/names", getAllTemplateNames);
 
 router.get('/by-template/:templateId', getServicesByTemplate);
+
+router.get('/providers',verifyToken, getProvidersByServiceTemplate);
 
 
 

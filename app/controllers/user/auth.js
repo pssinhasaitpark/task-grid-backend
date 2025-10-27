@@ -11,6 +11,7 @@ import { compareOTPHash } from "../../middlewares/jwtAuth.js";
 
 
 export const registerUser = async (req, res) => {
+  
   const { name, email, password, phone, role } = req.body;
 
   try {
