@@ -4,7 +4,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import routes from "./app/routes/index.js";
 import { connectDB } from "./app/config/dbConfig.js";
-import mediaRoutes from "./app/routes/media.js";
+
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ app.use(express.json());
 
 connectDB();
 routes(app);
-mediaRoutes(app);
+
 
 app.get("/", (req, res) => {
   return res.status(200).send({

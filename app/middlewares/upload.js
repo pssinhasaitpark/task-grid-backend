@@ -1,16 +1,7 @@
 import multer from 'multer';
 import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs';
 import { handleResponse } from '../utils/helper.js';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+import cloudinary from '../config/cloudinary.js';
 
 const storage = multer.memoryStorage();
 
@@ -28,34 +19,39 @@ const upload = multer({
 });
 
 
-
 export const uploadAndConvertImage = (fieldName) => [
   upload.single(fieldName),
   async (req, res, next) => {
-      if (!req.file) return next();
-      
-
-    const uploadDir = path.join(__dirname, '../uploads');
-
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.webp`;
-    const filePath = path.join(uploadDir, fileName);
+    if (!req.file) return next();
 
     try {
-      await sharp(req.file.buffer)
-        .resize(800)
+   
+      const buffer = await sharp(req.file.buffer)
+        .resize(800) 
         .webp({ quality: 80 })
-        .toFile(filePath);
+        .toBuffer();
+
+     
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'task-grid-images',
+            resource_type: 'image',
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(buffer);
+      });
 
    
-      req.imagePath = `/media/${fileName}`;
+      req.imageUrl = uploadResult.secure_url;
+      req.cloudinaryPublicId = uploadResult.public_id;
       next();
     } catch (err) {
-      console.error('Image processing error:', err);
+      console.error('Image upload error:', err);
       return handleResponse(res, 500, 'Image upload failed');
     }
   },
