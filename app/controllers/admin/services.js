@@ -22,7 +22,7 @@ export const createServiceTemplate = async (req, res) => {
       isApproved: true, 
       createdBy: req.user._id,
       createdByRole: req.user.role,
-      image: req.imagePath || null,
+      image: req.imageUrl || null,
       tokenAmountPercent: tokenAmountPercent || 0,
       convenienceFee: convenienceFee || 0          
     });
@@ -151,10 +151,19 @@ export const updateServiceTemplate = async (req, res) => {
       template.convenienceFee = convenienceFee;
     }
 
-    if (req.imagePath) {
-      template.image = req.imagePath;
-    }
+ 
+    if (req.imageUrl) {
+      if (template.image && template.image.includes('res.cloudinary.com')) {
+        try {
+          const publicId = template.image.split('/').slice(-1)[0].split('.')[0];
+          await cloudinary.uploader.destroy(`uploads/${publicId}`);
+        } catch (err) {
+          console.warn('Old image cleanup failed:', err.message);
+        }
+      }
 
+      template.image = req.imageUrl;
+    }
     await template.save();
 
     return handleResponse(res, 200, 'Service template updated successfully', template);
