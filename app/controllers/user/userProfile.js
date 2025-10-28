@@ -57,10 +57,31 @@ export const updateProfile = async (req, res) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
 
-    if (req.imagePath) {
-      user.profile_image = req.imagePath;
-    }
+    // ✅ 3. Cloudinary image upload integration
+    if (req.imageUrl) {
+      // Optional: delete old Cloudinary image if it exists
+      if (
+        user.profile_image &&
+        user.profile_image.includes("res.cloudinary.com")
+      ) {
+        try {
+          // Extract public_id from existing Cloudinary URL
+          const parts = user.profile_image.split("/");
+          const filename = parts.pop().split(".")[0];
+          const folder = parts
+            .slice(parts.indexOf("task-grid-images"))
+            .join("/");
+          const publicId = folder ? `${folder}/${filename}` : filename;
 
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.warn("⚠️ Failed to delete old profile image:", err.message);
+        }
+      }
+
+      // Update new profile image
+      user.profile_image = req.imageUrl;
+    }
     if (serviceArea !== undefined) {
       if (user.role !== "provider") {
         return handleResponse(
@@ -154,15 +175,10 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-
-
-
-
 export const getUserById = async (req, res) => {
   try {
     const id = req.params.id;
 
-    
     const user = await User.findById(id).select(
       "_id name email phone serviceArea role profile_image isNew availableDays isVerified createdAt"
     );
@@ -171,14 +187,18 @@ export const getUserById = async (req, res) => {
       return handleResponse(res, 404, "User not found");
     }
 
-    const availability = await Availability.findOne({ user: id }).select("_id days");
+    const availability = await Availability.findOne({ user: id }).select(
+      "_id days"
+    );
 
     const providerServices = await ProviderService.find({ provider: id })
       .populate({
         path: "template",
-        select: "_id name isApproved image createdAt", 
+        select: "_id name isApproved image createdAt",
       })
-      .select("_id template hourlyRate dailyRate description isApproved createdAt");
+      .select(
+        "_id template hourlyRate dailyRate description isApproved createdAt"
+      );
 
     const userData = {
       ...user.toObject(),
