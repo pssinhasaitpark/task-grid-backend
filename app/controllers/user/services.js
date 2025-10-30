@@ -94,7 +94,7 @@ export const createProviderService = async (req, res) => {
     }
 
     // Mark onboarding complete (set is_new = false)
-    await User.findByIdAndUpdate(providerId, { isNew: false });
+    await User.findByIdAndUpdate(providerId, { is_new: false });
 
     return res.status(201).json({
       message: existingService

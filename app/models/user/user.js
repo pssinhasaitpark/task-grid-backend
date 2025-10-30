@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  isNew: {
+  is_new: {
     type: Boolean,
     default: true,
   },

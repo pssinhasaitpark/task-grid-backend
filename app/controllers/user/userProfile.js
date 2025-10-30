@@ -183,7 +183,7 @@ export const getUserById = async (req, res) => {
 
     
     const user = await User.findById(id).select(
-      "_id name email phone serviceArea role profile_image isNew availableDays isVerified createdAt"
+      "_id name email phone serviceArea role profile_image is_new availableDays isVerified createdAt"
     );
 
     if (!user) {
