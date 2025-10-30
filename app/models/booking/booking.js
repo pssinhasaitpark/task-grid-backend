@@ -26,23 +26,32 @@ const bookingSchema = new mongoose.Schema({
     ref: "Address",
     required: true,
   },
-  status: {
+  bookingStatus: {
     type: String,
-    enum: ["pending", "confirmed", "cancelled", "in-progress", "completed"],
+    enum: ["pending", "confirmed", "cancelled", "started", "completed"],
     default: "pending",
   },
   otp: {
     type: String,
     default: null,
   },
+  isOtpVerified: {
+    type: Boolean,
+    default: false,
+  },
+
   paymentStatus: {
     type: String,
-    enum: ["pending", "completed", "failed"],
+    enum: ["pending", "paid", "failed"],
     default: "pending",
   },
   amount: {
     type: Number,
     required: true,
+  },
+  razorpayOrderId: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,
