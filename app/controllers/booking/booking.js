@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 
 
 
+
 export const createBooking = async (req, res) => {
   try {
     const { providerId, serviceId, bookingDate, addressId } = req.body || {};
@@ -485,7 +486,6 @@ export const updateBookingStatus = async (req, res) => {
 };
   
   
-
 export const verifyBookingOtp = async (req, res) => {
     try {
       const { otp } = req.body;
