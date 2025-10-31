@@ -175,11 +175,63 @@ export const updateProfile = async (req, res) => {
 
 
 
-
-
 export const getUserById = async (req, res) => {
   try {
     const id = req.params.id;
+    const { templateId } = req.query; 
+
+
+    const user = await User.findById(id).select(
+      "_id name email phone serviceArea role profile_image is_new availableDays isVerified createdAt"
+    );
+
+    if (!user) {
+      return handleResponse(res, 404, "User not found");
+    }
+
+
+    const availability = await Availability.findOne({ user: id }).select("_id days");
+
+  
+    let providerServiceFilter = { provider: id };
+    if (templateId) {
+      providerServiceFilter.template = templateId; 
+    }
+
+    
+    const providerServices = await ProviderService.find(providerServiceFilter)
+      .populate({
+        path: "template",
+        select: "_id name isApproved image createdAt",
+      })
+      .select("_id template hourlyRate dailyRate description isApproved createdAt");
+
+  
+    const userData = {
+      ...user.toObject(),
+      availability: availability || null,
+      services: providerServices || [],
+    };
+
+    return handleResponse(
+      res,
+      200,
+      templateId
+        ? "Specific provider service (by template) fetched successfully"
+        : "User details fetched successfully",
+      userData
+    );
+  } catch (error) {
+    console.error("Get User by ID Error:", error);
+    return handleResponse(res, 500, "Internal server error");
+  }
+};
+
+/* 
+export const getUserById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const providerServiceId = req.query;
 
     
     const user = await User.findById(id).select(
@@ -215,4 +267,4 @@ export const getUserById = async (req, res) => {
     console.error("Get User by ID Error:", error);
     return handleResponse(res, 500, "Internal server error");
   }
-};
+}; */
