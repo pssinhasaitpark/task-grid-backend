@@ -512,4 +512,45 @@ export const verifyBookingOtp = async (req, res) => {
       return handleResponse(res, 500, "Internal server error", { error: err.message });
     }
 };
+
+
+export const getProviderBookedDates = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    if (!providerId) {
+      return handleResponse(res, 400, "Provider ID is required");
+    }
+
+    // 2️⃣ Define which statuses count as booked
+    const activeStatuses = ["pending", "confirmed", "started", "completed"];
+
+    // 3️⃣ Get today (for filtering future bookings)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 4️⃣ Fetch bookings of this provider for future dates
+    const bookings = await Booking.find({
+      provider: providerId,
+      bookingStatus: { $in: activeStatuses },
+      bookingDate: { $gte: today },
+    }).select("bookingDate");
+
+    // 5️⃣ Extract unique booked dates
+    const bookedDates = [
+      ...new Set(bookings.map((b) => b.bookingDate.toISOString().split("T")[0])),
+    ];
+
+    // 6️⃣ Send response
+    return handleResponse(res, 200, "Provider booked dates fetched successfully", {
+      bookedDates,
+    });
+
+  } catch (error) {
+    console.error("Error fetching provider booked dates:", error);
+    return handleResponse(res, 500, "Internal server error", {
+      error: error.message,
+    });
+  }
+};
   

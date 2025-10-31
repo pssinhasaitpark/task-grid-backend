@@ -25,11 +25,6 @@ const UserSchema = new mongoose.Schema({
     required: true,
   },
 
-  serviceArea: {
-    type: [String],
-    default: [],
-  },
-
   role: {
     type: String,
     enum: ["customer", "provider", "admin"],

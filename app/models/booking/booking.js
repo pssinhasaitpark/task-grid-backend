@@ -20,7 +20,6 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  
 
   location: {
     type: mongoose.Schema.Types.ObjectId,
