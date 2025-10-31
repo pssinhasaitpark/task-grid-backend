@@ -78,7 +78,7 @@ export const createProviderService = async (req, res) => {
       existingService.hourlyRate = hourlyRate;
       existingService.dailyRate = dailyRate;
       existingService.description = description;
-      existingService.isApproved = true; // ✅ approve updated service
+      existingService.isApproved = true;
       service = await existingService.save();
     } else {
       service = new ProviderService({
@@ -87,13 +87,13 @@ export const createProviderService = async (req, res) => {
         hourlyRate,
         dailyRate,
         description,
-        isApproved: true, // ✅ approve newly created service
+        isApproved: true, 
       });
 
       await service.save();
     }
 
-    // Mark onboarding complete (set is_new = false)
+    
     await User.findByIdAndUpdate(providerId, { is_new: false });
 
     return res.status(201).json({
@@ -247,110 +247,6 @@ export const getServicesByTemplate = async (req, res) => {
     return handleResponse(res, 500, "Internal server error");
   }
 };
-
-
-/* export const getProvidersByServiceTemplate = async (req, res) => {
-  try {
-    const { templateId, page = 1, limit = 10 } = req.query;
-
-  
-    let templateFilter = {};
-    let templateIds = [];
-
-    if (templateId) {
-      templateIds = templateId.split(',').map(id => id.trim());
-
-
-      const existingTemplates = await ServiceTemplate.find({
-        _id: { $in: templateIds }
-      }).select('_id');
-
-      if (existingTemplates.length === 0) {
-        return handleResponse(res, 404, "No matching service templates found");
-      }
-
-      templateFilter.template = { $in: templateIds };
-    }
-
-
-    const allProviderServices = await ProviderService.find({
-      ...templateFilter,
-      isApproved: true,
-    }).select('provider');
-
-
-    const uniqueProviderIds = [...new Set(allProviderServices.map(ps => ps.provider.toString()))];
-
-    if (uniqueProviderIds.length === 0) {
-      return handleResponse(res, 200, "No verified providers found", {
-        count: 0,
-        providers: [],
-      });
-    }
-
-
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 10;
-    const skip = (pageNum - 1) * limitNum;
-
-
-    const paginatedProviderIds = uniqueProviderIds.slice(skip, skip + limitNum);
-
-
-    const providers = await User.find({
-      _id: { $in: paginatedProviderIds },
-      isVerified: true,
-    }).select('name email serviceArea isVerified profile_image');
-
-    if (providers.length === 0) {
-      return handleResponse(res, 200, "No verified providers found on this page", {
-        count: 0,
-        providers: [],
-      });
-    }
-
-   
-    const services = await ProviderService.find({
-      provider: { $in: providers.map(p => p._id) },
-      isApproved: true,
-      ...(templateFilter.template ? { template: templateFilter.template } : {}),
-    })
-    .populate('template', 'name')
-    .select('provider template hourlyRate dailyRate description'); 
-    
-   
-    const servicesByProvider = {};
-    services.forEach(service => {
-      const provId = service.provider.toString();
-      if (!servicesByProvider[provId]) {
-        servicesByProvider[provId] = [];
-      }
-      servicesByProvider[provId].push(service);
-    });
-
-
-    const providersWithServices = providers.map(provider => ({
-      ...provider.toObject(),
-      services: servicesByProvider[provider._id.toString()] || [],
-    }));
-
-    
-    return handleResponse(res, 200, "Verified providers with services fetched successfully", {
-      count: uniqueProviderIds.length,
-      page: pageNum,
-      limit: limitNum,
-      providers: providersWithServices,
-    });
-
-  } catch (error) {
-    console.error("Error fetching verified providers by template:", error);
-    return handleResponse(res, 500, "Server Error");
-  }
-};
- */
-
-
-
 
 export const getProvidersByServiceTemplate = async (req, res) => {
   try {

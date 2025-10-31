@@ -7,6 +7,7 @@ import {
   getBookingById,
   updateBookingStatus,
   verifyBookingOtp,
+  getProviderBookedDates,
 } from "../../controllers/booking/booking.js";
 
 import { verifyToken } from "../../middlewares/jwtAuth.js";
@@ -27,12 +28,13 @@ router.get("/my", getMyBookings);
 
 router.get("/invoice", getInvoiceDetails);
 
-
 router.post("/:id/verify-otp", verifyToken,verifyBookingOtp);
-
 
 router.put("/:id/status", updateBookingStatus);
 
-router.get("/:id", getBookingById);
+router.get("/booked-dates/:providerId", getProviderBookedDates);                      
 
-export default router;
+router.get("/:id", getBookingById);                      
+
+                      
+export default router;                      
