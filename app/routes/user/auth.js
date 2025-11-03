@@ -2,6 +2,7 @@ import express from "express";
 import {
   changePassword,
   forgatePassword,
+  googleAuth,
   loginUser,
   refreshAccessToken,
   registerUser,
@@ -25,5 +26,7 @@ router.post("/refresh-token", refreshAccessToken);
 router.post("/verify-reset-otp", verifyResetOtp);
 
 router.post('/change-password', verifyToken, changePassword);
+
+router.post("/google", googleAuth);
 
 export default router;

@@ -93,32 +93,40 @@ export const razorpayWebhook = async (req, res) => {
     if (event === "payment.captured") {
       const payment = req.body.payload.payment.entity;
       console.log("✅ Payment captured:", payment.id);
-
+    
       const otp = Math.floor(100000 + Math.random() * 900000);
-
+    
       const booking = await Booking.findOneAndUpdate(
         { razorpayOrderId: payment.order_id },
-        { paymentStatus: "paid", otp: otp },
+        { 
+          paymentStatus: "paid",
+          otp: otp,
+          razorpayPaymentId: payment.id  
+        },
         { new: true }
       );
-
+    
       if (booking) {
-        console.log("Booking marked as paid ", booking._id);
+        console.log("Booking marked as paid:", booking._id);
       } else {
         console.log("Booking not found for order:", payment.order_id);
       }
     }
-
+    
     if (event === "payment.failed") {
       const payment = req.body.payload.payment.entity;
-
+    
       await Booking.findOneAndUpdate(
         { razorpayOrderId: payment.order_id },
-        { paymentStatus: "failed" }
+        { 
+          paymentStatus: "failed",
+          razorpayPaymentId: payment.id 
+        }
       );
-
+    
       console.log("❌ Payment failed:", payment.id);
     }
+    
 
     res.status(200).json({ message: "Webhook received" });
   } catch (error) {
@@ -397,94 +405,93 @@ export const getBookingById = async (req, res) => {
   
 
 export const updateBookingStatus = async (req, res) => {
-    try {
-      const bookingId = req.params.id;
-      const userId = req.user.id;
-      const userRole = req.user.role;
-      const { bookingStatus } = req.body;
-  
-        
-      if (userRole !== "provider") {
-        return handleResponse(res, 403, "Access denied: Only providers can update status");
-      }
-  
-      
-      if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-        return handleResponse(res, 400, "Invalid booking ID");
-      }
-  
-      
-      const validStatuses = ["pending", "confirmed", "started", "completed", "cancelled"];
-      if (!bookingStatus || !validStatuses.includes(bookingStatus)) {
-        return handleResponse(
-          res,
-          400,
-          `Invalid booking status. Valid values: ${validStatuses.join(", ")}`
-        );
-      }
-  
-    
-      const booking = await Booking.findById(bookingId);
-      if (!booking) {
-        return handleResponse(res, 404, "Booking not found");
-      }
-  
-    
-      if (booking.provider.toString() !== userId) {
-        return handleResponse(res, 403, "Access denied: Not your booking");
-      }
-  
-      const currentStatus = booking.bookingStatus;
-      const workflow = ["pending", "confirmed", "started", "completed"];
-  
-     
-      if (bookingStatus === "cancelled") {
-        if (!["pending", "confirmed"].includes(currentStatus)) {
-          return handleResponse(
-            res,
-            400,
-            `Cannot cancel booking after it has started or completed. Current status: "${currentStatus}"`
-          );
-        }
-      } else {
+  try {
+    const bookingId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { bookingStatus } = req.body;
 
-        const currentIndex = workflow.indexOf(currentStatus);
-        const nextIndex = workflow.indexOf(bookingStatus);
-  
-        if (nextIndex !== currentIndex + 1) {
-          return handleResponse(
-            res,
-            400,
-            `Invalid status transition from "${currentStatus}" to "${bookingStatus}". Must follow: pending → confirmed → started → completed`
-          );
-        }
-      }
-  
-  
-      if (bookingStatus === "started" && !booking.isOtpVerified) {
-        return handleResponse(
-          res,
-          400,
-          "OTP verification required before starting the service"
-        );
-      }
-  
-
-      booking.bookingStatus = bookingStatus;
-      booking.updatedAt = Date.now();
-      await booking.save();
-  
-      return handleResponse(res, 200, "Booking status updated successfully", {
-        bookingId: booking._id,
-        bookingStatus: booking.bookingStatus,
-        updatedAt: booking.updatedAt,
-      });
-    } catch (error) {
-      console.error("Error updating booking status:", error);
-      return handleResponse(res, 500, "Internal server error", { error: error.message });
+    if (userRole !== "provider") {
+      return handleResponse(res, 403, "Access denied: Only providers can update status");
     }
+
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return handleResponse(res, 400, "Invalid booking ID");
+    }
+
+    const validStatuses = ["pending", "confirmed", "started", "completed", "cancelled"];
+    if (!bookingStatus || !validStatuses.includes(bookingStatus)) {
+      return handleResponse(
+        res,
+        400,
+        `Invalid booking status. Valid values: ${validStatuses.join(", ")}`
+      );
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return handleResponse(res, 404, "Booking not found");
+    }
+
+    if (booking.provider.toString() !== userId) {
+      return handleResponse(res, 403, "Access denied: Not your booking");
+    }
+
+    const currentStatus = booking.bookingStatus;
+    const workflow = ["pending", "confirmed", "started", "completed"];
+
+    if (bookingStatus === "cancelled") {
+      if (!["pending", "confirmed"].includes(currentStatus)) {
+        return handleResponse(
+          res,
+          400,
+          `Cannot cancel booking after it has started or completed. Current status: "${currentStatus}"`
+        );
+      }
+    } else {
+      const currentIndex = workflow.indexOf(currentStatus);
+      const nextIndex = workflow.indexOf(bookingStatus);
+
+      if (nextIndex !== currentIndex + 1) {
+        return handleResponse(
+          res,
+          400,
+          `Invalid status transition from "${currentStatus}" to "${bookingStatus}". Must follow: pending → confirmed → started → completed`
+        );
+      }
+    }
+
+    if (bookingStatus === "started" && !booking.isOtpVerified) {
+      return handleResponse(
+        res,
+        400,
+        "OTP verification required before starting the service"
+      );
+    }
+
+    booking.bookingStatus = bookingStatus;
+    booking.updatedAt = Date.now();
+    await booking.save();
+
+    const statusMessages = {
+      pending: "Booking is now pending",
+      confirmed: "Booking has been confirmed",
+      started: "Service has been started",
+      completed: "Booking has been completed successfully",
+      cancelled: "Booking has been cancelled",
+    };
+
+    return handleResponse(res, 200, statusMessages[bookingStatus], {
+      bookingId: booking._id,
+      bookingStatus: booking.bookingStatus,
+      updatedAt: booking.updatedAt,
+    });
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    return handleResponse(res, 500, "Internal server error", { error: error.message });
+  }
 };
-  
+
   
 export const verifyBookingOtp = async (req, res) => {
     try {
@@ -522,26 +529,23 @@ export const getProviderBookedDates = async (req, res) => {
       return handleResponse(res, 400, "Provider ID is required");
     }
 
-    // 2️⃣ Define which statuses count as booked
     const activeStatuses = ["pending", "confirmed", "started", "completed"];
 
-    // 3️⃣ Get today (for filtering future bookings)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 4️⃣ Fetch bookings of this provider for future dates
     const bookings = await Booking.find({
       provider: providerId,
       bookingStatus: { $in: activeStatuses },
       bookingDate: { $gte: today },
     }).select("bookingDate");
 
-    // 5️⃣ Extract unique booked dates
+
     const bookedDates = [
       ...new Set(bookings.map((b) => b.bookingDate.toISOString().split("T")[0])),
     ];
 
-    // 6️⃣ Send response
+   
     return handleResponse(res, 200, "Provider booked dates fetched successfully", {
       bookedDates,
     });

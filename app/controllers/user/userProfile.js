@@ -2,6 +2,9 @@ import User from "../../models/user/user.js";
 import { handleResponse } from "../../utils/helper.js";
 import ProviderService from "../../models/services/providerService.js";
 import Availability from "../../models/user/availability.js";
+
+
+
 export const getProfile = async (req, res) => {
   try {
     const { id } = req.user;
@@ -147,7 +150,6 @@ export const updateProfile = async (req, res) => {
     return handleResponse(res, 500, "Internal server error");
   }
 };
-
 
 
 export const getUserById = async (req, res) => {

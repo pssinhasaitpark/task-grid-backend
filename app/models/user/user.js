@@ -16,14 +16,19 @@ const UserSchema = new mongoose.Schema({
 
   password: {
     type: String,
-    required: true,
     minlength: 6,
+    required: function () {
+      return !this.googleId;
+    },
   },
-
+  
   phone: {
     type: String,
-    required: true,
+    required: function () {
+      return !this.googleId;
+    },
   },
+  
 
   role: {
     type: String,
@@ -43,6 +48,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  googleId: {
+    type: String,
+    default: null,
+  },  
 
   password_reset_jti: {
     type: String,
