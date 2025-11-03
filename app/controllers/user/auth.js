@@ -9,6 +9,11 @@ import { sendOTPEmail } from "../../utils/emailHandler.js";
 import { hashOTP } from "../../middlewares/jwtAuth.js";
 import { compareOTPHash } from "../../middlewares/jwtAuth.js";
 
+import { OAuth2Client } from "google-auth-library";
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
+
 
 export const registerUser = async (req, res) => {
   
@@ -236,7 +241,7 @@ export const refreshAccessToken = async (req, res) => {
 
     
     const newAccessToken = await signAccessToken(user._id.toString(), user.role);
-    const newRefreshToken = await signRefreshToken(user); // rotates and saves in DB
+    const newRefreshToken = await signRefreshToken(user);
 
     return handleResponse(res, 200, "Tokens refreshed", {
       accessToken: newAccessToken,
@@ -289,3 +294,68 @@ export const changePassword = async (req, res) => {
   }
 };
 
+
+
+export const googleAuth = async (req, res) => {
+  const { id_token } = req.body;
+
+  if (!id_token) return handleResponse(res, 400, "Google token missing");
+
+  try {
+  
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+
+    let user = await User.findOne({
+      $or: [{ googleId }, { email }],
+    });
+
+    if (!user) {
+   
+      user = await User.create({
+        googleId,
+        name,
+        email,
+        role: "customer",
+        profile_image: picture,
+        isVerified: true, 
+        is_new: true,
+      });
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.profile_image = user.profile_image || picture;
+        user.isVerified = true;
+        await user.save();
+      }
+    }
+
+    
+    const accessToken = await signAccessToken(user._id.toString(), user.role);
+    const refreshToken = await signRefreshToken(user);
+
+    return handleResponse(res, 200, "Google login successful", {
+      accessToken,
+      refreshToken,
+      role: user.role,
+      is_new: user.is_new,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || null,
+        address: user.address,
+        profile_image: user.profile_image,
+      },
+    });
+  } catch (err) {
+    console.error("Google login error:", err);
+    return handleResponse(res, 500, "Google authentication failed");
+  }
+};
